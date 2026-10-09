@@ -1,0 +1,38 @@
+# Shallot PC client as a container (no tray): collects backups from the PS5
+# into ./backups and, if configured, mirrors them to a vault.
+#
+#   1. Create .env next to this file (never commit it):
+#        SHALLOT_PS5_HOST=192.168.137.2
+#        # Linux: owner of ./backups and ./config (id -u / id -g)
+#        # PUID=1000
+#        # PGID=1000
+#        # Off-site copy uploaded by this PC with its own key (optional; or
+#        # choose "PC and VPS" in the Shallot web UI and let the PS5 hand over
+#        # address, token and key):
+#        # SHALLOT_VAULT_URL=http://vault.example.com:8091
+#        # SHALLOT_VAULT_TOKEN=<the vault's token>
+#   2. docker compose up -d        (logs: docker compose logs -f)
+#   3. In the Shallot web UI, the PC chip shows this client ("Docker"); its
+#      panel can ping it, sync now, pause/resume, thin out and send to the VPS.
+#   4. Own vault settings: keep ./config/vault.key safe (created on first start).
+services:
+  shallot-sync:
+    build: .
+    image: shallot-sync:latest
+    restart: unless-stopped
+    environment:
+      SHALLOT_PS5_HOST: ${SHALLOT_PS5_HOST:?set SHALLOT_PS5_HOST in .env}
+      SHALLOT_PS5_PORT: ${SHALLOT_PS5_PORT:-8082}
+      # shown in the PC panel (a container's own host name is a random id)
+      SHALLOT_CLIENT_NAME: ${SHALLOT_CLIENT_NAME:-${COMPUTERNAME:-docker}}
+      # needed when the web UI login is on (filled in when downloaded from the PS5)
+      SHALLOT_CLIENT_KEY: ${SHALLOT_CLIENT_KEY:-}
+      SHALLOT_VAULT_URL: ${SHALLOT_VAULT_URL:-}
+      SHALLOT_VAULT_TOKEN: ${SHALLOT_VAULT_TOKEN:-}
+      PUID: ${PUID:-10001}
+      PGID: ${PGID:-10001}
+    volumes:
+      - ./backups:/backups
+      - ./config:/config
+    # On Linux, host networking reaches a PS5 on the local network most simply:
+    # network_mode: host

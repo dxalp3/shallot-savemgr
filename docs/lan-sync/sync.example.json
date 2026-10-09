@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "max_queue_mb": 2048,
+  "keep_acked_hours": 168,
+  "game_close_backup": true,
+  "stability_check": true,
+  "stability_interval_s": 2,
+  "stability_samples": 2,
+  "stability_timeout_s": 45,
+  "idle_sweep": true,
+  "idle_delay_min": 10,
+  "bidirectional": "ask",
+  "regression_recovery": "ask",
+  "rollback_before_restore": true,
+  "startup_reconcile": true,
+  "startup_protect_untracked": true,
+  "followup_rescan_s": 180
+}

@@ -1,0 +1,54 @@
+# Shallot vault: the off-site copy for "VPS only" and "PC and VPS".
+#
+#   1. Create .env next to this file (never commit it):
+#        SHALLOT_VAULT_TOKEN=<at least 24 random characters>
+#   2. docker compose up -d
+#   3. Open TCP port 8091 on the VPS firewall.
+#   4. In the Shallot web UI (Backup & Sync -> Where backups go): address
+#      http://<VPS address>:8091 and the same token.
+#
+# Port 8091 is plain HTTP but accepts signed requests only: the token never
+# crosses the network, a request cannot be replayed, and everything stored is
+# encrypted on the PS5 or the PC before it leaves. The PS5 cannot do HTTPS,
+# the PC client signs the same way, so this is all that is needed.
+#
+# Optional HTTPS (bearer-token clients, e.g. a PC config.json with an
+# https:// vault URL): point a DNS name at the VPS, add VAULT_HOST=<that name>
+# to .env and run  docker compose --profile https up -d
+# Already running a reverse proxy? Route VAULT_HOST to shallot-vault:8090 there.
+#
+# Trying it out without a VPS: run this on your PC and use
+# http://<PC address on the PS5's network>:8091 in the web UI.
+services:
+  shallot-vault:
+    build: .
+    image: shallot-vault:latest
+    restart: unless-stopped
+    environment:
+      SHALLOT_VAULT_TOKEN: ${SHALLOT_VAULT_TOKEN:?set SHALLOT_VAULT_TOKEN in .env}
+      SHALLOT_VAULT_SIGNED_PORT: "8091"
+    volumes:
+      - vault-data:/data
+    expose:
+      - "8090"
+    ports:
+      - "8091:8091"
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["https"]
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      VAULT_HOST: ${VAULT_HOST:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      - shallot-vault
+
+volumes:
+  vault-data:
+  caddy-data:

@@ -1,0 +1,2 @@
+# Shell scripts run inside WSL/Linux
+*.sh text eol=lf

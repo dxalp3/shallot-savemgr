@@ -1,0 +1,29 @@
+{
+  "ps5_host": "192.168.1.50",
+  "port": 8082,
+  "backup_dir": "ShallotBackups",
+  "poll_interval_s": 30,
+  "verify_downloads": true,
+  "http_timeout_s": 60,
+  "log_file": "shallot_sync.log",
+  "retention": {
+    "enabled": true,
+    "keep_all_days": 2,
+    "daily_days": 30,
+    "weekly": true,
+    "trash_days": 14,
+    "interval_h": 6
+  },
+  "dedup": {
+    "enabled": true,
+    "block_size": 4096,
+    "pack_mb": 256
+  },
+  "vault": {
+    "url": "",
+    "token": "",
+    "key_file": "vault.key",
+    "interval_min": 10,
+    "slice_s": 20
+  }
+}

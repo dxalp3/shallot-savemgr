@@ -1,0 +1,6 @@
+{$VAULT_HOST} {
+	request_body {
+		max_size 32MB
+	}
+	reverse_proxy shallot-vault:8090
+}

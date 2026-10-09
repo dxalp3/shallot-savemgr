@@ -1,0 +1,79 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build deps
+        # The PS5 SDK's bin/clang etc. are wrappers that delegate to host
+        # LLVM via prospero-llvm-config (which probes for llvm-config-15..21
+        # in PATH). So the runner DOES need llvm/clang/lld installed — but
+        # use versioned package names (clang-18, llvm-18, lld-18) because
+        # the unversioned `clang` meta-package isn't in the default apt
+        # sources of catthehacker/ubuntu:act-latest.
+        run: |
+          apt-get update -qq
+          apt-get install -y --no-install-recommends \
+              xxd unzip ca-certificates curl \
+              clang-18 llvm-18 lld-18
+
+      - name: Download PS5 Payload SDK
+        run: |
+          curl -fLsS -o /tmp/ps5-payload-sdk.zip \
+            https://github.com/ps5-payload-dev/sdk/releases/latest/download/ps5-payload-sdk.zip
+          unzip -q /tmp/ps5-payload-sdk.zip -d /tmp
+
+      - name: Build
+        run: make PS5_PAYLOAD_SDK=/tmp/ps5-payload-sdk
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: shallot-savemgr
+          path: shallot-savemgr.elf
+
+      - name: Create release (on tag push only)
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          TAG="${GITHUB_REF#refs/tags/}"
+          API="${GITHUB_SERVER_URL}/api/v1/repos/${GITHUB_REPOSITORY}"
+
+          # Re-use existing release for the tag if present, else create one.
+          REL_ID=$(curl -fsS -H "Authorization: token $TOKEN" \
+              "$API/releases/tags/$TAG" 2>/dev/null \
+              | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("id",""))' \
+              2>/dev/null || true)
+          if [ -z "${REL_ID:-}" ]; then
+              REL_ID=$(curl -fsS -X POST -H "Authorization: token $TOKEN" \
+                  -H "Content-Type: application/json" \
+                  -d "{\"tag_name\":\"$TAG\",\"name\":\"$TAG\",\"target_commitish\":\"$GITHUB_SHA\"}" \
+                  "$API/releases" \
+                  | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+          fi
+
+          # Overwrite the asset if it already exists, then upload.
+          curl -fsS -H "Authorization: token $TOKEN" "$API/releases/$REL_ID/assets" \
+              | python3 -c 'import json,sys; [print(a["id"]) for a in json.load(sys.stdin) if a["name"]=="shallot-savemgr.elf"]' \
+              | while read aid; do
+                  [ -n "$aid" ] && curl -fsS -X DELETE -H "Authorization: token $TOKEN" \
+                      "$API/releases/$REL_ID/assets/$aid"
+                done
+          curl -fsS -X POST -H "Authorization: token $TOKEN" \
+              -F "attachment=@shallot-savemgr.elf" \
+              "$API/releases/$REL_ID/assets?name=shallot-savemgr.elf"
