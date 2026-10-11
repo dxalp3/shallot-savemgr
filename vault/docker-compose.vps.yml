@@ -4,8 +4,3 @@ services:
     networks:
       - default
       - caddy-network
-
-networks:
-  caddy-network:
-    external: true
-    name: ${CADDY_NETWORK:?Set CADDY_NETWORK}
