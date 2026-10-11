@@ -35,22 +35,9 @@ services:
     expose:
       - "8090"
     ports:
-      - "127.0.0.1:8091:8091"
+      - "8091:8091"
 
-  caddy:
-    image: caddy:2-alpine
-    profiles: ["https"]
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      VAULT_HOST: ${VAULT_HOST:-}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-    depends_on:
-      - shallot-vault
+ 
 
 volumes:
   vault-data:
