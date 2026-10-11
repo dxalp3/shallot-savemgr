@@ -21,7 +21,7 @@
 # http://<PC address on the PS5's network>:8091 in the web UI.
 services:
   shallot-vault:
-    build: .
+    build: 
       context: .
       dockerfile: Dockerfile
     image: shallot-vault:latest
